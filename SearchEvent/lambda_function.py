@@ -16,6 +16,7 @@ CATEGORIES = []
 
 ACCESS_KEY = os.environ['AWS_ACCESS_KEY']
 SECRET_KEY = os.environ['AWS_SECRET_KEY']
+DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 db = boto3.resource(
     'dynamodb',
@@ -34,18 +35,20 @@ table = db.Table("Events")
 def check_neighborhood(neighborhood):
     if neighborhood not in NEIGHBORHOODS:
         return "Invalid neighborhood"
-    return ""
+    return None
 
 def check_start(start):
     # if not start.isdigit():
-    if not isinstance(start, int):
-        return "Start must be a unix timestamp"
-    return ""
+    try:
+        datetime.datetime.strptime(date_text, DATETIME_FORMAT)
+    except ValueError:
+        return f"Incorrect data format, should be {DATETIME_FORMAT}"
+    return None
 
 def check_category(category):
     if category not in CATEGORIES:
         return "Invalid category"
-    return ""
+    return None
 
 def get_error(message):
     return {
@@ -64,8 +67,8 @@ def get_error(message):
 def event_to_event_response(event):
     start = event['start']
     end = event['end']
-    event['start'] = datetime.utcfromtimestamp(start).strftime('%Y-%m-%dT%H:%M:%SZ')
-    event['end'] = datetime.utcfromtimestamp(end).strftime('%Y-%m-%dT%H:%M:%SZ')
+    event['start'] = datetime.utcfromtimestamp(start).strftime(DATETIME_FORMAT)
+    event['end'] = datetime.utcfromtimestamp(end).strftime(DATETIME_FORMAT)
     return event
 
 def dispatch(event):

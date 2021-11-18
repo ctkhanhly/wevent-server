@@ -78,7 +78,7 @@ Resources:
   #         RunOrder: 1
   #         Configuration:
   #           BranchName: master
-  #           ConnectionArn: !Sub "arn:aws:codestar-connections:us-east-1:${AWS::AccountId}:connection/9f2f6313-c670-401c-b8da-431d332bcd13" # from codestar
+  #           ConnectionArn: !Sub "arn:aws:codestar-connections:us-east-1:${AWS::AccountId}:connection/6ba1ee6f-d4e7-4d90-9b01-b064e294eacc" # from codestar
   #           FullRepositoryId: ctkhanhly/wevent-frontend
   #           OutputArtifactFormat: CODE_ZIP
   #         OutputArtifacts:

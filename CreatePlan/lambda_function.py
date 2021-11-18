@@ -3,39 +3,52 @@ import boto3
 from botocore.exceptions import ClientError
 import logging
 import pprint
-import time
-import uuid
+from boto3.dynamodb.conditions import Key
+from datetime import datetime
 import os
 
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
+NEIGHBORHOODS = []
+CATEGORIES = []
+
 ACCESS_KEY = os.environ['AWS_ACCESS_KEY']
 SECRET_KEY = os.environ['AWS_SECRET_KEY']
+DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 db = boto3.resource(
     'dynamodb',
     aws_access_key_id=ACCESS_KEY,
     aws_secret_access_key=SECRET_KEY,
     )
-table = db.Table("Plans")
+
+db = boto3.resource(
+    'dynamodb',
+    aws_access_key_id=ACCESS_KEY,
+    aws_secret_access_key=SECRET_KEY,
+    )
+table = db.Table("Events")
+
+
+def check_neighborhood(neighborhood):
+    if neighborhood not in NEIGHBORHOODS:
+        return "Invalid neighborhood"
+    return None
 
 def check_start(start):
     # if not start.isdigit():
-    if not isinstance(start, int):
-        return "Start must be a unix timestamp"
-    return ""
+    try:
+        datetime.datetime.strptime(date_text, DATETIME_FORMAT)
+    except ValueError:
+        return f"Incorrect data format, should be {DATETIME_FORMAT}"
+    return None
 
-def check_trigger_option(trigger_option):
-    # either a unix timestamp after current time
-    # or manual
-    if trigger_option.lower() == "manual":
-        return ""
-    if not trigger_option.isdigit():
-        return "Invalid trigger timestamp. Trigger must be either a unix time or \"manual\""
-    LATENCY = 5 # in seconds
-    return int(trigger_option) >= (time.time() - LATENCY)
+def check_category(category):
+    if category not in CATEGORIES:
+        return "Invalid category"
+    return None
 
 def get_error(message):
     return {
@@ -51,51 +64,54 @@ def get_error(message):
         }
     }
 
-'''
-votes: [{ event_id: S, users: [] }]
-'''
+def event_to_event_response(event):
+    start = event['start']
+    end = event['end']
+    event['start'] = datetime.utcfromtimestamp(start).strftime(DATETIME_FORMAT)
+    event['end'] = datetime.utcfromtimestamp(end).strftime(DATETIME_FORMAT)
+    return event
 
 def dispatch(event):
-    name = event['body']['name']
-    start = event['body']['start']
-    trigger_option = event['body']['trigger_option'].lower()
-    start_error = check_start(start)
-    trigger_option_error = check_trigger_option(trigger_option)
+    
+    neighborhood = event['queryStringParameters']['neighborhood']
+    start = event['queryStringParameters']['start'] # unix timestamp
+    category = event['queryStringParameters']['category']
 
+    neighborhood_error = check_neighborhood(neighborhood)
+    start_error = check_start(start)
+    category_error = check_category(category)
+
+    if neighborhood_error:
+        return get_error(neighborhood_error)
     if start_error:
         return get_error(start_error)
-    if trigger_option_error:
-        return get_error(trigger_option_error)
-    
-    plan_id = uuid.uuid4().hex
+    if category_error:
+        return get_error(category_error)
 
     try:
-        response = table.put_item(
-        Item={
-                'plan_id': plan_id,
-                'name': name,
-                'start': start,
-                'trigger_option': trigger_option,
-                'invitees': [],
-                'votes': [],
-                'selected_event': ""
-            }
+        response = table.query(
+            KeyConditionExpression=Key('start').ge(start) 
+            & KeyConditionExpression=Key('neighborhood').eq(neighborhood)
+            & KeyConditionExpression=Key('category').eq(category)
         )
+        events = response.get('Items', [])
+        events = list(map(event_to_event_response, events))
+        body = {
+            'results' : events
+        }
+        return return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
+            }
+            'body': json.dumps(body)
+        }
     except Exception as e:
-        raise IOError(e)
-    body = {
-        'plan_id': plan_id
-    }
-    return {
-        'statusCode': 200,
-        'headers': {
-            'Access-Control-Allow-Headers': '*',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
-        },
-        'body' : json.dumps(body)
-    }
-
+        # raise IOError(e)
+        return get_error(e)
+        
 
 def lambda_handler(event, context):
     logger.debug('event={}\ncontext={}'.format(event, context))

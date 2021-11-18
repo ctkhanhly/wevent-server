@@ -27,17 +27,19 @@ def check_start(start):
     # if not start.isdigit():
     if not isinstance(start, int):
         return "Start must be a unix timestamp"
-    return ""
+    return None
 
 def check_trigger_option(trigger_option):
     # either a unix timestamp after current time
     # or manual
     if trigger_option.lower() == "manual":
-        return ""
+        return None
     if not trigger_option.isdigit():
         return "Invalid trigger timestamp"
     LATENCY = 5 # in seconds
-    return int(trigger_option) >= (time.time() - LATENCY)
+    if int(trigger_option) >= (time.time() - LATENCY):
+        return None
+    return "Trigger Time should be a future time"
 
 def get_error(message):
     return {

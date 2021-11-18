@@ -28,18 +28,18 @@ table = db.Table("Events")
 def check_neighborhood(neighborhood):
     if neighborhood not in NEIGHBORHOODS:
         return "Invalid neighborhood"
-    return ""
+    return None
 
 def check_start(start):
     # if not start.isdigit():
     if not isinstance(start, int):
         return "Start must be a unix timestamp"
-    return ""
+    return None
 
 def check_category(category):
     if category not in CATEGORIES:
         return "Invalid category"
-    return ""
+    return None
 
 def get_error(message):
     return {
