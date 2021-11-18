@@ -1,0 +1,747 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Group Event Planner
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 150
+
+
+# Parameters
+Parameters:
+  FrontendBucket:
+    Description: Frontend S3 bucket
+    Type: String
+    Default: wevent-frontend
+
+  
+# Parameters for S3 Photo Bucket
+# Parameters:
+  EnvironParameter:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - stage
+      - prod
+    Description: 'Enter dev, stage, or prod. Default is dev.'
+
+  MainApplicationName:
+    Type: String
+    Default: Wevent
+    Description: Enter name for the main vpc and s3 bucket.
+# S3 Params End
+
+
+Resources:
+
+
+  # build artifacts bucket for frontend code
+  BuildArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags: 
+        - 
+          Key: "Stack"
+          Value: !Ref AWS::StackName
+        -
+          Key: "Project"
+          Value: "Wevent"
+    UpdateReplacePolicy: Delete
+
+
+  # Pipeline to copy github frontend repo files to S3WebsiteBucket upon git
+
+  # FrontendCodePipeline:
+  #   Type: 'AWS::CodePipeline::Pipeline'
+  #   Properties:
+  #     Name: WeventFrontend
+  #     RoleArn: !GetAtt CodePipelineExecutionRole.Arn
+  #     ArtifactStore:
+  #       Type: S3
+  #       Location: !Ref BuildArtifactsBucket
+  #     Stages: # Only has 2 stages: SOURCE and DEPLOY
+  #     - Name: Source
+  #       Actions:
+  #       - Name: Source
+  #         ActionTypeId:
+  #           Category: Source
+  #           Owner: AWS
+  #           Provider: CodeStarSourceConnection
+  #           Version: '1'
+  #         RunOrder: 1
+  #         Configuration:
+  #           BranchName: master
+  #           ConnectionArn: !Sub "arn:aws:codestar-connections:us-east-1:${AWS::AccountId}:connection/9f2f6313-c670-401c-b8da-431d332bcd13" # from codestar
+  #           FullRepositoryId: ctkhanhly/wevent-frontend
+  #           OutputArtifactFormat: CODE_ZIP
+  #         OutputArtifacts:
+  #         - Name: SourceArtifact
+  #         Region: us-east-1
+  #         Namespace: SourceVariables
+  #     - Name: Deploy
+  #       Actions:
+  #       - Name: Deploy
+  #         ActionTypeId:
+  #           Category: Deploy
+  #           Owner: AWS
+  #           Provider: S3
+  #           Version: '1'
+  #         #runOrder: 1
+  #         Configuration:
+  #           BucketName: !Ref FrontendBucket # bucket name is hardcoded here 
+  #           Extract: 'true'
+  #         OutputArtifacts: []
+  #         InputArtifacts:
+  #         - Name: SourceArtifact
+  #         Region: us-east-1
+  #         Namespace: DeployVariables
+
+
+  # S3 Website Bucket Resource -- FRONTEND
+  S3WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref FrontendBucket
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+# S3 Website Bucket Resource End -- FRONTEND
+  
+  PlansTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Plans
+      AttributeDefinitions: 
+        - AttributeName: plan_id
+          AttributeType: S
+        - AttributeName: name
+          AttributeType: S
+        - AttributeName: host_id
+          AttributeType: S
+      KeySchema: 
+        - AttributeName: plan_id
+          KeyType: HASH
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+
+  CreatePlanFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      FunctionName: CreatePlanFunction
+      CodeUri: ./CreatePlan/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      Policies:
+        Statement:
+          - Sid: PlansReadWrite
+            Action:
+              - "dynamodb:*"
+            Effect: "Allow"
+            Resource:
+              Fn::Join:
+                - ""
+                - - "arn:aws:dynamodb:"
+                  - Ref: AWS::Region
+                  - ":"
+                  - Ref: AWS::AccountId
+                  - ":table/"
+                  - Ref: "PlansTable"
+
+  SearchEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SearchEventFunction
+      CodeUri: ./SearchEvent/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      Policies:
+        Statement:
+          - Sid: PlansReadWrite
+            Action:
+              - "dynamodb:*"
+            Effect: "Allow"
+            Resource:
+              Fn::Join:
+                - ""
+                - - "arn:aws:dynamodb:"
+                  - Ref: AWS::Region
+                  - ":"
+                  - Ref: AWS::AccountId
+                  - ":table/Events"
+
+  UpdatePlanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: UpdatePlanFunction
+      CodeUri: ./UpdatePlan/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      Policies:
+        Statement:
+          - Sid: PlansReadWrite
+            Action:
+              - "dynamodb:*"
+            Effect: "Allow"
+            Resource:
+              Fn::Join:
+                - ""
+                - - "arn:aws:dynamodb:"
+                  - Ref: AWS::Region
+                  - ":"
+                  - Ref: AWS::AccountId
+                  - ":table/"
+                  - Ref: "PlansTable"
+
+  # This was added to give API Gateway permission to invoke LF2
+  # (Otherwise, it would show LF2 as a proxy in the API Gateway console,
+  # but would not actually trigger it because it wouldn't have permission)
+  CreatePlanInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - CreatePlanFunction
+        - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+        - ''
+        - - 'arn:aws:execute-api:'
+          - Ref: AWS::Region
+          - ":"
+          - Ref: AWS::AccountId
+          - ":"
+          - Ref: EventAPI
+          - "/*"
+
+  SearchEventInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - SearchEventFunction
+        - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+        - ''
+        - - 'arn:aws:execute-api:'
+          - Ref: AWS::Region
+          - ":"
+          - Ref: AWS::AccountId
+          - ":"
+          - Ref: EventAPI
+          - "/*"
+
+  UpdatePlanInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - UpdatePlanFunction
+        - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+        - ''
+        - - 'arn:aws:execute-api:'
+          - Ref: AWS::Region
+          - ":"
+          - Ref: AWS::AccountId
+          - ":"
+          - Ref: EventAPI
+          - "/*"
+
+# Note: 
+# 1. Paths and Responses Must be strings
+# 2. Credentials and URI are both hardcoded to refer to specific Lambda and the s3 execution role
+  EventAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+        Name: Wevent
+        Body:
+          openapi: "3.0.0"
+          info:
+            version: 1.0.0
+            title: Wevent
+            description: Wevent APIs
+
+          paths:
+            /searchEvents:
+              get:
+                operationId: "searchEvents"
+                parameters:
+                - name: "neighborhood"
+                  in: "query"
+                  required: true
+                  schema:
+                    type: "string"
+                - name: "start"
+                  in: "query"
+                  required: true
+                  schema:
+                    type: "string"
+                - name: "category"
+                  in: "query"
+                  required: true
+                  schema:
+                    type: "string"
+                  
+                responses:
+                  '200':
+                    description: "200 response"
+                    content:
+                      application/json:
+                        schema:
+                          type: "object"
+                          properties:
+                            result:
+                              $ref: '#/components/schemas/Events'
+                            headers:
+                              type: "object"
+                              properties:
+                                Access-Control-Allow-Origin:
+                                  type: "string"
+                  '500':
+                    description: "500 response"
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/Error"
+                  '403':
+                    description: "403 response"
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/Error"
+                x-amazon-apigateway-integration:
+                  uri:
+                    Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${SearchEventFunction.Arn}/invocations"
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  passthroughBehavior: "when_no_match"
+                  httpMethod: "POST"
+                  contentHandling: "CONVERT_TO_TEXT"
+                  type: "aws_proxy"
+              options:
+
+                responses:
+                  '200':
+                    description: "200 response"
+                    content:
+                      application/json:
+                        schema:
+                          type: "object"
+                          properties:
+                            headers:
+                              type: "object"
+                              properties:
+                                Access-Control-Allow-Origin:
+                                  type: "string"
+                                Access-Control-Allow-Methods:
+                                  type: "string"
+                                Access-Control-Allow-Headers:
+                                  type: "string"
+                x-amazon-apigateway-integration:
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                        method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  requestTemplates:
+                    application/json: "{\"statusCode\": 200}"
+                  passthroughBehavior: "when_no_match"
+                  type: "mock"
+            
+            /createPlan:
+              post:
+                operationId: "createPlan"
+                requestBody:
+                  description: A JSON object containing pet information
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Plan"
+                responses:
+                  '200':
+                    description: "200 response"
+                    content:
+                      application/json:
+                        schema:
+                          type: "object"
+                          properties:
+                            body:
+                              type: "object"
+                              properties:
+                                plan_id:
+                                  type: "string"
+                            headers:
+                              type: "object"
+                              properties:
+                                Access-Control-Allow-Origin:
+                                  type: "string"
+                  '500':
+                    description: "500 response"
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/Error"
+                  '403':
+                    description: "403 response"
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/Error"
+            
+                x-amazon-apigateway-integration:
+                  uri:
+                    Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${CreatePlanFunction.Arn}/invocations"
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  passthroughBehavior: "when_no_match"
+                  httpMethod: "POST"
+                  contentHandling: "CONVERT_TO_TEXT"
+                  type: "aws_proxy"
+              options:
+                
+                responses:
+                  '200':
+                    description: "200 response"
+                    content:
+                      application/json:
+                        schema:
+                          type: "object"
+                          properties:
+                            headers:
+                              type: "object"
+                              properties:
+                                Access-Control-Allow-Origin:
+                                  type: "string"
+                                Access-Control-Allow-Methods:
+                                  type: "string"
+                                Access-Control-Allow-Headers:
+                                  type: "string"
+                x-amazon-apigateway-integration:
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                        method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  requestTemplates:
+                    application/json: "{\"statusCode\": 200}"
+                  passthroughBehavior: "when_no_match"
+                  type: "mock"
+            
+            /updatePlan:
+              put:
+                operationId: "updatePlan"
+                requestBody:
+                  description: A JSON object containing pet information
+                  content:
+                    application/json:
+                      schema:
+                        oneOf:
+                          - $ref: "#/components/schemas/VoteUpdate"
+                          - $ref: "#/components/schemas/AddFriendUpdate"
+                          - $ref: "#/components/schemas/ManualTriggerUpdate"
+                          - $ref: "#/components/schemas/AddEventUpdate"
+                responses:
+                  '200':
+                    description: "200 response"
+                    content:
+                      application/json:
+                        schema:
+                          type: "object"
+                          properties:
+                            headers:
+                              type: "object"
+                              properties:
+                                Access-Control-Allow-Origin:
+                                  type: "string"
+                  '500':
+                    description: "500 response"
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/Error"
+                  '403':
+                    description: "403 response"
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/Error"
+                x-amazon-apigateway-integration:
+                  uri:
+                    Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${UpdatePlanFunction.Arn}/invocations"
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  passthroughBehavior: "when_no_match"
+                  httpMethod: "POST"
+                  contentHandling: "CONVERT_TO_TEXT"
+                  type: "aws_proxy"
+            
+              options:
+                responses:
+                  '200':
+                    description: "200 response"
+                    content:
+                      application/json:
+                        schema:
+                          type: "object"
+                          properties:
+                            headers:
+                              type: "object"
+                              properties:
+                                Access-Control-Allow-Origin:
+                                  type: "string"
+                                Access-Control-Allow-Methods:
+                                  type: "string"
+                                Access-Control-Allow-Headers:
+                                  type: "string"
+                x-amazon-apigateway-integration:
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Methods: "'OPTIONS,PUT'"
+                        method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  requestTemplates:
+                    application/json: "{\"statusCode\": 200}"
+                  passthroughBehavior: "when_no_match"
+                  type: "mock"
+          components:
+            schemas:
+              Error:
+                type: "object"
+                properties:
+                  code:
+                    type: "integer"
+                    format: "int32"
+                  message:
+                    type: "string"
+              Plan:
+                type: "object"
+                required:
+                - "name"
+                - "start"
+                - "trigger_option"
+                - "host_id"
+                properties:
+                  name:
+                    type: "string"
+                  start:
+                    type: "string"
+                  trigger_option:
+                    type: "string"
+                  host_id:
+                    type: "string"
+              Events:
+                type: "object"
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+              Event:
+                type: "object"
+                properties:
+                  event_id:
+                    type: "string"
+                  event_name:
+                    type: "string"
+                  description:
+                    type: "string"
+                  start:
+                    type: "string"
+                  end:
+                    type: "string"
+                  venue_id:
+                    type: "string"
+                  category:
+                    type: "string"
+                  summary:
+                    type: "string"
+                  imageurl:
+                    type: "string"
+                    
+              VoteUpdate:
+                type: "object"
+                properties:
+                  update_type:
+                    type: "string"
+                  plan_id:
+                    type: "string"
+                  event_id:
+                    type: "string"
+                  user_id:
+                    type: "string"
+                required:
+                - event_id
+                - user_id
+                - plan_id
+                
+              AddFriendUpdate:
+                type: "object"
+                properties:
+                  update_type:
+                    type: "string"
+                  plan_id:
+                    type: "string"
+                  user_id:
+                    type: "string"
+                required:
+                - user_id
+                - plan_id
+                  
+              ManualTriggerUpdate:
+                type: "object"
+                properties:
+                  update_type:
+                    type: "string"
+                  plan_id:
+                    type: "string"
+                  selected_event_id:
+                    type: "string"
+                required:
+                - selected_event_id
+                - plan_id
+              AddEventUpdate:
+                type: "object"
+                properties:
+                  update_type:
+                    type: "string"
+                  plan_id:
+                    type: "string"
+                  event_id:
+                    type: "string"
+                required:
+                - event_id
+                - plan_id
+                      
+
+# end of API GateWay Definition
+
+
+
+
+# new stuff for codepipeline with codestar for frontend
+# cookiecutter
+  CodePipelineExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+        AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - 
+                Action: 
+                    - 'sts:AssumeRole'
+                Effect: Allow
+                Principal:
+                  Service: 
+                    - codepipeline.amazonaws.com
+        Path: /
+        Policies:
+            - PolicyName: CodePipelineAccess
+              PolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                    - 
+                        Effect: Allow
+                        Action:
+                            - 'iam:PassRole'
+                            - 'lambda:InvokeFunction'
+                            - 'lambda:ListFunctions'
+                            - 'lambda:InvokeAsyc'
+                        Resource: '*'
+            - PolicyName: CodePipelineCodeAndArtifactsS3Bucket
+              PolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                  - 
+                    Effect: Allow
+                    Action: 's3:*'
+                    Resource: !Sub 'arn:aws:s3:::${BuildArtifactsBucket}/*'
+            - PolicyName: AWSCodeStarConnectionsPowerUserAccess
+              PolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                  -
+                    Effect: Allow
+                    Action:
+                      - "codestar-connections:CreateConnection"
+                      - "codestar-connections:UseConnection"
+                      - "codestar-connections:GetConnection"
+                      - "codestar-connections:ListConnections"
+                      - "codestar-connections:ListInstallationTargets"
+                      -  "codestar-connections:GetInstallationUrl"
+                      -  "codestar-connections:GetIndividualAccessToken"
+                      -  "codestar-connections:StartOAuthHandshake"
+                      -  "codestar-connections:UpdateConnectionInstallation"
+                      -  "codestar-connections:ListTagsForResource"
+                    Resource: '*'
+            - PolicyName: CodePipelneS3PutAccess
+              PolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                  -
+                    Effect: Allow
+                    Action: "s3:PutObject"
+                    Resource: 'arn:aws:s3:::photos-frontend-hw2-dev/*'
+
+
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  # ES Start
+
+  CreatePlanFunction:
+    Description: "Function ARN to Create Plan"
+    Value: !GetAtt CreatePlanFunction.Arn
+  CreatePlanFunctionIamRole:
+    Description: "Implicit IAM Role created for CreatePlan Function"
+    Value: !GetAtt CreatePlanFunctionRole.Arn
+
+
+  SearchEventFunction:
+    Description: "Function ARN to Search Event"
+    Value: !GetAtt SearchEventFunction.Arn
+  SearchEventFunctionIamRole:
+    Description: "Implicit IAM Role created for SearchEvent Function"
+    Value: !GetAtt SearchEventFunctionRole.Arn
+
+  UpdatePlanFunction:
+    Description: "Function ARN to Update Plans"
+    Value: !GetAtt UpdatePlanFunction.Arn
+  UpdatePlanFunctionIamRole:
+    Description: "Implicit IAM Role created for UpdatePlan Function"
+    Value: !GetAtt UpdatePlanFunctionRole.Arn
+
