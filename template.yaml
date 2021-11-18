@@ -105,13 +105,13 @@ Resources:
 
 
   # S3 Website Bucket Resource -- FRONTEND
-  S3WebsiteBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Ref FrontendBucket
-      AccessControl: PublicRead
-      WebsiteConfiguration:
-        IndexDocument: index.html
+  # S3WebsiteBucket:
+  #   Type: AWS::S3::Bucket
+  #   Properties:
+  #     BucketName: !Ref FrontendBucket
+  #     AccessControl: PublicRead
+  #     WebsiteConfiguration:
+  #       IndexDocument: index.html
 # S3 Website Bucket Resource End -- FRONTEND
   
   PlansTable:
@@ -120,10 +120,6 @@ Resources:
       TableName: Plans
       AttributeDefinitions: 
         - AttributeName: plan_id
-          AttributeType: S
-        - AttributeName: name
-          AttributeType: S
-        - AttributeName: host_id
           AttributeType: S
       KeySchema: 
         - AttributeName: plan_id
