@@ -306,11 +306,10 @@ Resources:
                           properties:
                             result:
                               $ref: '#/components/schemas/Events'
-                            headers:
-                              type: "object"
-                              properties:
-                                Access-Control-Allow-Origin:
-                                  type: "string"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
                   '500':
                     description: "500 response"
                     content:
@@ -340,20 +339,16 @@ Resources:
                 responses:
                   '200':
                     description: "200 response"
-                    content:
-                      application/json:
+                    headers:
+                      Access-Control-Allow-Origin:
                         schema:
-                          type: "object"
-                          properties:
-                            headers:
-                              type: "object"
-                              properties:
-                                Access-Control-Allow-Origin:
-                                  type: "string"
-                                Access-Control-Allow-Methods:
-                                  type: "string"
-                                Access-Control-Allow-Headers:
-                                  type: "string"
+                          type: "string"
+                      Access-Control-Allow-Methods:
+                        schema:
+                          type: "string"
+                      Access-Control-Allow-Headers:
+                        schema:
+                          type: "string"
                 x-amazon-apigateway-integration:
                   responses:
                     default:
@@ -389,11 +384,10 @@ Resources:
                               properties:
                                 plan_id:
                                   type: "string"
-                            headers:
-                              type: "object"
-                              properties:
-                                Access-Control-Allow-Origin:
-                                  type: "string"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
                   '500':
                     description: "500 response"
                     content:
@@ -424,20 +418,16 @@ Resources:
                 responses:
                   '200':
                     description: "200 response"
-                    content:
-                      application/json:
+                    headers:
+                      Access-Control-Allow-Origin:
                         schema:
-                          type: "object"
-                          properties:
-                            headers:
-                              type: "object"
-                              properties:
-                                Access-Control-Allow-Origin:
-                                  type: "string"
-                                Access-Control-Allow-Methods:
-                                  type: "string"
-                                Access-Control-Allow-Headers:
-                                  type: "string"
+                          type: "string"
+                      Access-Control-Allow-Methods:
+                        schema:
+                          type: "string"
+                      Access-Control-Allow-Headers:
+                        schema:
+                          type: "string"
                 x-amazon-apigateway-integration:
                   responses:
                     default:
@@ -467,16 +457,10 @@ Resources:
                 responses:
                   '200':
                     description: "200 response"
-                    content:
-                      application/json:
+                    headers:
+                      Access-Control-Allow-Origin:
                         schema:
-                          type: "object"
-                          properties:
-                            headers:
-                              type: "object"
-                              properties:
-                                Access-Control-Allow-Origin:
-                                  type: "string"
+                          type: "string"
                   '500':
                     description: "500 response"
                     content:
@@ -506,20 +490,16 @@ Resources:
                 responses:
                   '200':
                     description: "200 response"
-                    content:
-                      application/json:
+                    headers:
+                      Access-Control-Allow-Origin:
                         schema:
-                          type: "object"
-                          properties:
-                            headers:
-                              type: "object"
-                              properties:
-                                Access-Control-Allow-Origin:
-                                  type: "string"
-                                Access-Control-Allow-Methods:
-                                  type: "string"
-                                Access-Control-Allow-Headers:
-                                  type: "string"
+                          type: "string"
+                      Access-Control-Allow-Methods:
+                        schema:
+                          type: "string"
+                      Access-Control-Allow-Headers:
+                        schema:
+                          type: "string"
                 x-amazon-apigateway-integration:
                   responses:
                     default:
