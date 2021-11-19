@@ -621,7 +621,7 @@ Resources:
                 - event_id
                 - plan_id
                       
-
+# https://swagger.io/docs/specification/describing-responses/
 # end of API GateWay Definition
 
 
