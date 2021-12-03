@@ -29,7 +29,8 @@ db = boto3.resource(
     aws_access_key_id=ACCESS_KEY,
     aws_secret_access_key=SECRET_KEY,
     )
-table = db.Table("Events")
+events_table = db.Table("Events")
+venues_table = db.Table("Venues")
 
 
 def check_neighborhood(neighborhood):
@@ -39,10 +40,8 @@ def check_neighborhood(neighborhood):
 
 def check_start(start):
     # if not start.isdigit():
-    try:
-        datetime.datetime.strptime(date_text, DATETIME_FORMAT)
-    except ValueError:
-        return f"Incorrect data format, should be {DATETIME_FORMAT}"
+    if not isinstance(start, int):
+        return "Start must be a unix timestamp"
     return None
 
 def check_category(category):
@@ -60,7 +59,7 @@ def get_error(message):
         },
         'body': {
             'code' : 500,
-            'message': e
+            'message': message
         }
     }
 
@@ -69,6 +68,19 @@ def event_to_event_response(event):
     end = event['end']
     event['start'] = datetime.utcfromtimestamp(start).strftime(DATETIME_FORMAT)
     event['end'] = datetime.utcfromtimestamp(end).strftime(DATETIME_FORMAT)
+    venue_id = event['venue_id']
+    try:
+        response = venues_table.get_item(Key={'venue_id': venue_id})
+        venue = response['Item']
+        event['full_address'] = venue['full_address'] # Double check schema
+        event['neighborhood'] = venue['neighborhood']
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+    return event
+
+def remove_neighborhood(event):
+    if 'neighborhood' in event:
+        del event['neighborhood']
     return event
 
 def dispatch(event):
@@ -89,13 +101,18 @@ def dispatch(event):
         return get_error(category_error)
 
     try:
-        response = table.query(
+        response = events_table.query(
+            # KeyConditionExpression=Key('start').eq(start) 
             KeyConditionExpression=Key('start').ge(start) 
-            & KeyConditionExpression=Key('neighborhood').eq(neighborhood)
+            # & KeyConditionExpression=Key('neighborhood').eq(neighborhood)
             & KeyConditionExpression=Key('category').eq(category)
         )
+        
         events = response.get('Items', [])
         events = list(map(event_to_event_response, events))
+        events = list(filter(lambda event: return event['neighborhood'] == neighborhood, events))
+        events = list(map(remove_neighborhood, events))
+
         body = {
             'results' : events
         }

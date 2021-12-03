@@ -167,13 +167,8 @@ Resources:
               - "dynamodb:*"
             Effect: "Allow"
             Resource:
-              Fn::Join:
-                - ""
-                - - "arn:aws:dynamodb:"
-                  - Ref: AWS::Region
-                  - ":"
-                  - Ref: AWS::AccountId
-                  - ":table/Events"
+              - !Sub "arn:aws:dynamodb:${AWS::Region}:{AWS::AccountId}:table/Events"
+              - !Sub "arn:aws:dynamodb:${AWS::Region}:{AWS::AccountId}:table/Venues"
 
   UpdatePlanFunction:
     Type: AWS::Serverless::Function
@@ -565,6 +560,8 @@ Resources:
                   summary:
                     type: "string"
                   imageurl:
+                    type: "string"
+                  full_address:
                     type: "string"
                     
               VoteUpdate:

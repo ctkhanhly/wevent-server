@@ -51,7 +51,7 @@ def get_error(message):
         },
         'body': {
             'code' : 500,
-            'message': e
+            'message': message
         }
     }
 
@@ -73,9 +73,9 @@ def process_vote_update(body):
     response = table.get_item(Key={'plan_id': plan_id}, ConsistentRead=True)
     votes = response['Item']['votes']
     def map_event(e):
-        if e.event_id == event_id:
-            if user_id not in e.users:
-                e.users.append(user_id)
+        if e['event_id'] == event_id:
+            if user_id not in e['users']:
+                e['users'].append(user_id)
         return e
     votes = list(map(map_event, votes))
     try:
@@ -123,7 +123,7 @@ def process_manual_trigger_update(body):
     response = table.get_item(Key={'plan_id': plan_id}, ConsistentRead=True)
     votes = response['Item']['votes']
     def filter_event(e):
-        return e.event_id == event_id
+        return e['event_id'] == event_id
     has_event = list(filter(filter_event, votes))
     if len(has_event) == 0:
         return get_error("Event was not selected in plan")
@@ -150,7 +150,7 @@ def process_add_event(body):
     response = table.get_item(Key={'plan_id': plan_id}, ConsistentRead=True)
     votes = response['Item']['votes']
     def filter_event(e):
-        return e.event_id == event_id
+        return e['event_id'] == event_id
     has_event = list(filter(filter_event, votes))
     if len(has_event) == 0:
         votes.append({'event_id': event_id, 'users': []})
@@ -177,7 +177,7 @@ def dispatch(event):
     elif update_type == "add_friend":
         return process_add_friend_update(event['body'])
     elif update_type == "manual_trigger":
-        return process_add_friend_update(event['body'])
+        return process_manual_trigger_update(event['body'])
     elif update_type == "add_event":
         return process_add_event(event['body'])
     else:
