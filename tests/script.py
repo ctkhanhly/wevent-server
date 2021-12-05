@@ -1,7 +1,8 @@
 import requests
 import json
+import time
 
-host = ''
+host = 'https://aby4vh6mhj.execute-api.us-east-1.amazonaws.com/test'
 API_KEY = ''
 
 def testUpdateVote(url):
@@ -18,7 +19,7 @@ def testUpdateVote(url):
     
     response = requests.put(
         url,
-        data=json.dumps(body)),
+        data=json.dumps(body),
         headers=getHeaders()
     )
 
@@ -36,7 +37,7 @@ def testUpdateAddEvent(url):
     
     response = requests.put(
         url,
-        data=json.dumps(body)),
+        data=json.dumps(body),
         headers=getHeaders()
     )
 
@@ -54,7 +55,7 @@ def testUpdateAddFriend(url):
     
     response = requests.put(
         url,
-        data=json.dumps(body)),
+        data=json.dumps(body),
         headers=getHeaders()
     )
 
@@ -72,7 +73,7 @@ def testUpdateManualTrigger(url):
     
     response = requests.put(
         url,
-        data=json.dumps(body)),
+        data=json.dumps(body),
         headers=getHeaders()
     )
 
@@ -80,9 +81,10 @@ def testUpdateManualTrigger(url):
 
 
 def getHeaders():
-    return {
-        'Authorization': f'Bearer {API_KEY}'
-    }
+    # return {
+    #     'Authorization': f'Bearer {API_KEY}'
+    # }
+    return {}
 
 def testUpdatePlan():
     url = host + '/updatePlan'
@@ -112,9 +114,9 @@ def testUpdatePlan():
 def testSearchEvents():
     url = host + '/searchEvents'
     params = {}
-    neighborhood = ''
-    start = ''
-    category = ''
+    neighborhood = 'Flatbush'
+    start = str(int(time.time()))
+    category = 'Food & Drink'
 
     params['neighborhood'] = neighborhood
     params['start'] = start
@@ -127,7 +129,8 @@ def testSearchEvents():
     )
 
     print('======================Test Search Events======================')
-    print(json.dumps(response, indent=4, sort_keys=True))
+    print(response.content)
+    # print(json.dumps(response.content, indent=4, sort_keys=True))
     print('============================================')
 
 def testCreatePlan():
@@ -156,6 +159,6 @@ def testCreatePlan():
 
 
 if __name__ == "__main__":
-    testCreatePlan()
+    # testCreatePlan()
     testSearchEvents()
-    testUpdatePlan()
+    # testUpdatePlan()

@@ -121,6 +121,13 @@ Resources:
       AttributeDefinitions: 
         - AttributeName: plan_id
           AttributeType: S
+        - AttributeName: host_id
+          AttributeType: S
+      GlobalSecondaryIndexes:
+        - IndexName: "host-index"
+          KeySchema:
+            - AttributeName: host_id
+              KeyType: HASH
       KeySchema: 
         - AttributeName: plan_id
           KeyType: HASH
@@ -162,13 +169,30 @@ Resources:
       Runtime: python3.8
       Policies:
         Statement:
-          - Sid: SearchEventsVenues
+          - Sid: DynamodbAccess
             Action:
               - "dynamodb:*"
             Effect: "Allow"
             Resource:
               - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Events"
               - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Venues"
+  
+  GetPlansFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: GetPlansFunction
+      CodeUri: ./GetPlans/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      Policies:
+        Statement:
+          - Sid: DynamodbAccess
+            Action:
+              - "dynamodb:*"
+            Effect: "Allow"
+            Resource:
+              - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Events"
+              - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${PlansTable}"
 
   UpdatePlanFunction:
     Type: AWS::Serverless::Function
@@ -311,12 +335,20 @@ Resources:
                       application/json:
                         schema:
                           $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
                   '403':
                     description: "403 response"
                     content:
                       application/json:
                         schema:
                           $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
                 x-amazon-apigateway-integration:
                   uri:
                     Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${SearchEventFunction.Arn}/invocations"
@@ -350,13 +382,98 @@ Resources:
                       statusCode: "200"
                       responseParameters:
                         method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
-                        method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                        method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,neighborhood,start,category'"
                         method.response.header.Access-Control-Allow-Origin: "'*'"
                   requestTemplates:
                     application/json: "{\"statusCode\": 200}"
                   passthroughBehavior: "when_no_match"
                   type: "mock"
-            
+
+            /getPlans:
+              get:
+                operationId: "getPlans"
+                parameters:
+                - name: "user_id"
+                  in: "query"
+                  required: true
+                  schema:
+                    type: "string"
+                  
+                responses:
+                  '200':
+                    description: "200 response"
+                    content:
+                      application/json:
+                        schema:
+                          type: "object"
+                          properties:
+                            result:
+                              $ref: '#/components/schemas/Plans'
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
+                  '500':
+                    description: "500 response"
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
+                  '403':
+                    description: "403 response"
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
+
+                x-amazon-apigateway-integration:
+                  uri:
+                    Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${SearchEventFunction.Arn}/invocations"
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  passthroughBehavior: "when_no_match"
+                  httpMethod: "POST"
+                  contentHandling: "CONVERT_TO_TEXT"
+                  type: "aws_proxy"
+              options:
+
+                responses:
+                  '200':
+                    description: "200 response"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
+                      Access-Control-Allow-Methods:
+                        schema:
+                          type: "string"
+                      Access-Control-Allow-Headers:
+                        schema:
+                          type: "string"
+                x-amazon-apigateway-integration:
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                        method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,user_id'"
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  requestTemplates:
+                    application/json: "{\"statusCode\": 200}"
+                  passthroughBehavior: "when_no_match"
+                  type: "mock"
+
             /createPlan:
               post:
                 operationId: "createPlan"
@@ -389,12 +506,20 @@ Resources:
                       application/json:
                         schema:
                           $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
                   '403':
                     description: "403 response"
                     content:
                       application/json:
                         schema:
                           $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
             
                 x-amazon-apigateway-integration:
                   uri:
@@ -462,12 +587,20 @@ Resources:
                       application/json:
                         schema:
                           $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
                   '403':
                     description: "403 response"
                     content:
                       application/json:
                         schema:
                           $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
                 x-amazon-apigateway-integration:
                   uri:
                     Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${UpdatePlanFunction.Arn}/invocations"
@@ -533,6 +666,62 @@ Resources:
                     type: "string"
                   host_id:
                     type: "string"
+              Plans:
+                type: "object"
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlanResponse'
+
+              PlanResponse:
+                type: "object"
+                properties:
+                  plan_id:
+                    type: "string"
+                  votes:
+                    type: "array"
+                    items:
+                      $ref: '#/components/schemas/Vote'
+                  invitees:
+                    type: "array"
+                    items:
+                      type: "string"
+                  name:
+                    type: "string"
+                  trigger_option:
+                    type: "string"
+                  selected_event:
+                    type: "string"
+              
+              Vote:
+                type: "object"
+                properties:
+                  event:
+                    $ref: '#/components/schemas/EventInPlan'
+                  users:
+                    type: "array"
+                    items:
+                      type: "string"
+              
+              EventInPlan:
+                type: "object"
+                properties:
+                  event_id:
+                    type: "string"
+                  event_name:
+                    type: "string"
+                  description:
+                    type: "string"
+                  start:
+                    type: "string"
+                  end:
+                    type: "string"
+                  imageurl:
+                    type: "string"
+                  full_address:
+                    type: "string"
+
               Events:
                 type: "object"
                 properties:
@@ -605,6 +794,7 @@ Resources:
                 required:
                 - selected_event_id
                 - plan_id
+                
               AddEventUpdate:
                 type: "object"
                 properties:

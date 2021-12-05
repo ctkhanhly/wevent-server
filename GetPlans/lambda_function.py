@@ -1,11 +1,12 @@
 import json
 import boto3
 from botocore.exceptions import ClientError
+from boto3.dynamodb.conditions import Key
 import logging
 import pprint
 import time
-import uuid
 import os
+from datetime import datetime
 
 
 logger = logging.getLogger()
@@ -20,26 +21,8 @@ db = boto3.resource(
     aws_access_key_id=ACCESS_KEY,
     aws_secret_access_key=SECRET_KEY,
     )
-table = db.Table("Plans")
-
-def check_start(start):
-    # print('check start', isinstance(start, int), start.isdigit())
-    if not isinstance(start, int) and not start.isdigit():
-        # if not isinstance(start, int):
-        return "Start must be a unix timestamp"
-    return None
-
-def check_trigger_option(trigger_option):
-    # either a unix timestamp after current time
-    # or manual
-    if trigger_option.lower() == "manual":
-        return None
-    if not trigger_option.isdigit():
-        return "Invalid trigger timestamp. Trigger must be either a unix time or \"manual\""
-    LATENCY = 5 # in seconds
-    if int(trigger_option) >= (time.time() - LATENCY):
-        return None
-    return "Trigger Time should be a future time"
+plans_table = db.Table("Plans")
+events_table = db.Table("Events")
 
 def get_error(message):
     print('get_error message', message)
@@ -61,38 +44,50 @@ def get_error(message):
 votes: [{ event_id: S, users: [] }]
 '''
 
-def dispatch(event):
-    body = json.loads(event['body'])
-    name = body['name']
-    start = body['start']
-    trigger_option = body['trigger_option'].lower()
-    host_id = body['host_id']
-    
-    start_error = check_start(start)
-    trigger_option_error = check_trigger_option(trigger_option)
+def date_from_unix(unix):
+    return datetime.utcfromtimestamp(unix).strftime(DATETIME_FORMAT)
 
-    if start_error:
-        return get_error(start_error)
-    if trigger_option_error:
-        return get_error(trigger_option_error)
-    
-    plan_id = uuid.uuid4().hex
+def event_response(vote):
+    try:
+        response = events_table.get_item(Key={'event_id': vote['event_id']})
+        if 'Item' not in response:
+            return None
+        item = response['Item']
+        del vote['event_id']
+        vote['event'] = {
+            'event_id': item['event_id'],
+            'event_name':  item['event_name'],
+            'description': item['description'],
+            'start': date_from_unix(item['start']),
+            'end': date_from_unix(item['end']),
+            'imageurl': item['imageurl'],
+            'full_address': item['full_address']
+        }
+        return vote
+    except ClientError as e:
+        # return get_error(e)
+        return None
+    except Exception as e:
+        # raise IOError(e)
+        return None
+
+def plan_to_plan_response(plan):
+    plan['votes'] = list(map(event_response, plan['votes']))
+    plan['votes'] = list(filter(lambda vote: vote != None, plan['votes']))
+    return plan
+
+def dispatch(event):
+    user_id = event['queryStringParameters']['user_id']
 
     try:
-        response = table.put_item(
-        Item={
-                'plan_id': plan_id,
-                'name': name,
-                'start': start,
-                'trigger_option': trigger_option,
-                'invitees': [],
-                'votes': [],
-                'selected_event': "",
-                'host_id': host_id
-            }
+        response = plans_table.query(
+            IndexName='host-index',
+            KeyConditionExpression=Key('host_id').eq(user_id)
         )
+        plans = response.get('Items', [])
+        plans = list(map(plan_to_plan_response), plans)
         body = {
-            'plan_id': plan_id
+            'results': plans
         }
         return {
             'statusCode': 200,
