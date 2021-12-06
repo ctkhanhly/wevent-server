@@ -94,5 +94,5 @@ def lambda_handler(event, context):
     logger.debug('event={}\ncontext={}'.format(event, context))
     response = dispatch()
     logger.debug(response)
-    return 
+    return response
 
