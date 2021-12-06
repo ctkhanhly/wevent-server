@@ -99,6 +99,80 @@ paths:
         passthroughBehavior: "when_no_match"
         type: "mock"
 
+  /getEventMetaData:
+    get:
+      operationId: "getEventMetaData"      
+      responses:
+        '200':
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                type: "object"                
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: "string"
+        '500':
+          description: "500 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: "string"
+        '403':
+          description: "403 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: "string"
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${GetEventMetaData.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        passthroughBehavior: "when_no_match"
+        httpMethod: "GET"
+        contentHandling: "CONVERT_TO_TEXT"
+        type: "aws_proxy"
+    options:
+
+      responses:
+        '200':
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: "string"
+            Access-Control-Allow-Methods:
+              schema:
+                type: "string"
+            Access-Control-Allow-Headers:
+              schema:
+                type: "string"
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        requestTemplates:
+          application/json: "{\"statusCode\": 200}"
+        passthroughBehavior: "when_no_match"
+        type: "mock"
+
   /getPlans:
     get:
       operationId: "getPlans"
