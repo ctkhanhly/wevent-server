@@ -441,7 +441,7 @@ Resources:
 
                 x-amazon-apigateway-integration:
                   uri:
-                    Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${SearchEventFunction.Arn}/invocations"
+                    Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${GetPlansFunction.Arn}/invocations"
                   responses:
                     default:
                       statusCode: "200"
