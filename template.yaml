@@ -149,6 +149,10 @@ Resources:
       CodeUri: ./CreatePlan/
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
       Policies:
         Statement:
           - Sid: PlansReadWrite
@@ -172,6 +176,10 @@ Resources:
       CodeUri: ./SearchEvent/
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
       Policies:
         Statement:
           - Sid: DynamodbAccess
@@ -189,6 +197,10 @@ Resources:
       CodeUri: ./GetEventMetaData/
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
       Policies:
         Statement:
           - Sid: DynamodbAccess
@@ -206,6 +218,10 @@ Resources:
       CodeUri: ./GetPlans/
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
       Policies:
         Statement:
           - Sid: DynamodbAccess
@@ -223,6 +239,10 @@ Resources:
       CodeUri: ./UpdatePlan/
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
       Policies:
         Statement:
           - Sid: PlansReadWrite
