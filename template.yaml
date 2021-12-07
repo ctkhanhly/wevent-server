@@ -458,12 +458,8 @@ Resources:
                   '200':
                     description: "200 response"
                     content:
-<<<<<<< HEAD
                       application/json:  
                         schema:       
-=======
-                      application/json:         
->>>>>>> df8e21ee5dd189ebc0d882597c89db22ad700d97
                     headers:
                       Access-Control-Allow-Origin:
                         schema:
