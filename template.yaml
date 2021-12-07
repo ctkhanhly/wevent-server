@@ -458,9 +458,7 @@ Resources:
                   '200':
                     description: "200 response"
                     content:
-                      application/json:
-                        schema:
-                          type: "object"                
+                      application/json:         
                     headers:
                       Access-Control-Allow-Origin:
                         schema:
@@ -469,7 +467,7 @@ Resources:
                     description: "500 response"
                     content:
                       application/json:
-                        schema:
+                        schema: 
                           $ref: "#/components/schemas/Error"
                     headers:
                       Access-Control-Allow-Origin:
@@ -1044,3 +1042,9 @@ Outputs:
     Description: "Implicit IAM Role created for UpdatePlan Function"
     Value: !GetAtt UpdatePlanFunctionRole.Arn
 
+  GetEventMetaData:
+    Description: "Function ARN to GetEventMetaData"
+    Value: !GetAtt GetEventMetaData.Arn
+  GetEventMetaDataIamRole:
+    Description: "Implicit IAM Role created for GetEventMetaData Function"
+    Value: !GetAtt GetEventMetaDataRole.Arn
