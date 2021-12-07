@@ -459,7 +459,11 @@ Resources:
                     description: "200 response"
                     content:
                       application/json:  
-                        schema:       
+                        schema:   
+                          type: "object"
+                            properties:
+                              result:
+                                $ref: '#/components/schemas/EventMetaData'    
                     headers:
                       Access-Control-Allow-Origin:
                         schema:
@@ -887,7 +891,15 @@ Resources:
                     type: "string"
                   full_address:
                     type: "string"
-                    
+              
+              EventMetaData:
+                type: "object"
+                properties:
+                  neighborhoods:
+                    type: "array"
+                  categories:
+                    type: "array"
+
               VoteUpdate:
                 type: "object"
                 properties:
