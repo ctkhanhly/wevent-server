@@ -461,9 +461,9 @@ Resources:
                       application/json:  
                         schema:   
                           type: "object"
-                            properties:
-                              result:
-                                $ref: '#/components/schemas/EventMetaData'    
+                          properties:
+                            result:
+                              $ref: '#/components/schemas/EventMetaData'    
                     headers:
                       Access-Control-Allow-Origin:
                         schema:
