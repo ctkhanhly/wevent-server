@@ -458,8 +458,12 @@ Resources:
                   '200':
                     description: "200 response"
                     content:
+<<<<<<< HEAD
                       application/json:  
                         schema:       
+=======
+                      application/json:         
+>>>>>>> df8e21ee5dd189ebc0d882597c89db22ad700d97
                     headers:
                       Access-Control-Allow-Origin:
                         schema:
@@ -571,7 +575,7 @@ Resources:
 
                 x-amazon-apigateway-integration:
                   uri:
-                    Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${SearchEventFunction.Arn}/invocations"
+                    Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${GetPlansFunction.Arn}/invocations"
                   responses:
                     default:
                       statusCode: "200"

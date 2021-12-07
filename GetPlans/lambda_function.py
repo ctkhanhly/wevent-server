@@ -7,6 +7,8 @@ import pprint
 import time
 import os
 from datetime import datetime
+import decimal
+import ast
 
 
 logger = logging.getLogger()
@@ -23,6 +25,15 @@ db = boto3.resource(
     )
 plans_table = db.Table("Plans")
 events_table = db.Table("Events")
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            if o % 1 > 0:
+                return float(o)
+            else:
+                return int(o)
+        return super(DecimalEncoder, self).default(o)
 
 def get_error(message):
     print('get_error message', message)
@@ -72,6 +83,7 @@ def event_response(vote):
         return None
 
 def plan_to_plan_response(plan):
+    plan = ast.literal_eval((json.dumps(plan, cls=DecimalEncoder)))
     plan['votes'] = list(map(event_response, plan['votes']))
     plan['votes'] = list(filter(lambda vote: vote != None, plan['votes']))
     return plan
@@ -85,7 +97,7 @@ def dispatch(event):
             KeyConditionExpression=Key('host_id').eq(user_id)
         )
         plans = response.get('Items', [])
-        plans = list(map(plan_to_plan_response), plans)
+        plans = list(map(plan_to_plan_response, plans))
         body = {
             'results': plans
         }
