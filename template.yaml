@@ -149,6 +149,10 @@ Resources:
       CodeUri: ./CreatePlan/
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
       Policies:
         Statement:
           - Sid: PlansReadWrite
@@ -172,6 +176,10 @@ Resources:
       CodeUri: ./SearchEvent/
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
       Policies:
         Statement:
           - Sid: DynamodbAccess
@@ -182,6 +190,27 @@ Resources:
               - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Events"
               - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Venues"
   
+  GetEventMetaData:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: GetEventMetaData
+      CodeUri: ./GetEventMetaData/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
+      Policies:
+        Statement:
+          - Sid: DynamodbAccess
+            Action:
+              - "dynamodb:*"
+            Effect: "Allow"
+            Resource:
+              - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Events"
+              - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Venues"
+
   GetPlansFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -189,6 +218,10 @@ Resources:
       CodeUri: ./GetPlans/
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
       Policies:
         Statement:
           - Sid: DynamodbAccess
@@ -206,6 +239,10 @@ Resources:
       CodeUri: ./UpdatePlan/
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_: AKIAU64U76RLZT3SMF4X
+          AWS_SECRET_KEY_: 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
       Policies:
         Statement:
           - Sid: PlansReadWrite
@@ -252,6 +289,26 @@ Resources:
       FunctionName:
         Fn::GetAtt:
         - SearchEventFunction
+        - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+        - ''
+        - - 'arn:aws:execute-api:'
+          - Ref: AWS::Region
+          - ":"
+          - Ref: AWS::AccountId
+          - ":"
+          - Ref: EventAPI
+          - "/*"
+  
+  GetEventMetaDataInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - GetEventMetaData
         - Arn
       Principal: apigateway.amazonaws.com
       SourceArn:
@@ -394,6 +451,79 @@ Resources:
                   passthroughBehavior: "when_no_match"
                   type: "mock"
 
+            /getEventMetaData:
+              get:
+                operationId: "getEventMetaData"      
+                responses:
+                  '200':
+                    description: "200 response"
+                    content:
+                      application/json:  
+                        schema:       
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
+                  '500':
+                    description: "500 response"
+                    content:
+                      application/json:
+                        schema: 
+                          $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
+                  '403':
+                    description: "403 response"
+                    content:
+                      application/json:
+                        schema:
+                          $ref: "#/components/schemas/Error"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
+                x-amazon-apigateway-integration:
+                  uri:
+                    Fn::Sub: "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${GetEventMetaData.Arn}/invocations"
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  passthroughBehavior: "when_no_match"
+                  httpMethod: "GET"
+                  contentHandling: "CONVERT_TO_TEXT"
+                  type: "aws_proxy"
+              options:
+
+                responses:
+                  '200':
+                    description: "200 response"
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: "string"
+                      Access-Control-Allow-Methods:
+                        schema:
+                          type: "string"
+                      Access-Control-Allow-Headers:
+                        schema:
+                          type: "string"
+                x-amazon-apigateway-integration:
+                  responses:
+                    default:
+                      statusCode: "200"
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                        method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  requestTemplates:
+                    application/json: "{\"statusCode\": 200}"
+                  passthroughBehavior: "when_no_match"
+                  type: "mock"
+                  
             /getPlans:
               get:
                 operationId: "getPlans"
@@ -913,3 +1043,9 @@ Outputs:
     Description: "Implicit IAM Role created for UpdatePlan Function"
     Value: !GetAtt UpdatePlanFunctionRole.Arn
 
+  GetEventMetaData:
+    Description: "Function ARN to GetEventMetaData"
+    Value: !GetAtt GetEventMetaData.Arn
+  GetEventMetaDataIamRole:
+    Description: "Implicit IAM Role created for GetEventMetaData Function"
+    Value: !GetAtt GetEventMetaDataRole.Arn
