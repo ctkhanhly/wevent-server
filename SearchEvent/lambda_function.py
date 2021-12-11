@@ -16,6 +16,7 @@ import decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
+MAX_NUMBER_OF_EVENTS = 20
 
 NEIGHBORHOODS = []
 CATEGORIES = []
@@ -159,7 +160,7 @@ def dispatch(event):
             # KeyConditionExpression=Key('start').gte(start) & Key('category').eq(category)
         )
         print('response from events table', response)
-        events = response.get('Items', [])
+        events = response.get('Items', [])[:MAX_NUMBER_OF_EVENTS]
         events = list(map(change_start, events))
         print('finished change_start')
         events = list(filter(lambda event: event['start'] >= start, events))
