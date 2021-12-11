@@ -99,7 +99,7 @@ def event_to_event_response(event, neighborhood):
         if 'Item' not in response:
             return None
         venue = response['Item']
-        
+        event['venue_name'] = venue['venue_name']
         event['full_address'] = venue['full_address'] # Double check schema
         return event
     except ClientError as e:

@@ -21,7 +21,7 @@ db = boto3.resource(
     )
 table = db.Table("Plans")
 
-
+user_table = db.Table("Users")
 
 def check_start(start):
     # print('check start', isinstance(start, int), start.isdigit())
@@ -73,12 +73,12 @@ def process_vote_update(body):
     event_id = body['event_id']
     user_id = body['user_id']
 
-    response = table.get_item(Key={'plan_id': plan_id}, ConsistentRead=True)
+    response = table.get_item(Key={'plan_id': plan_id}, ConsistentRead=True)    
     if 'Item' not in response:
         return get_error(f"No plan exists with plan_id: {plan_id}")
     print('item', response['Item'])
     item = response['Item']
-    votes = response['Item']['votes']
+    votes = response['Item']['votes']  
     def map_event(e):
         if e['event_id'] == event_id:
             if user_id not in e['users']:
@@ -112,6 +112,11 @@ def process_add_friend_update(body):
         return get_error(f"No plan exists with plan_id: {plan_id}")
     print('item', response['Item'])
     item = response['Item']
+
+    user_response = user_table.get_item(Key={'email': user_id}, ConsistentRead=True)
+    if 'Item' not in user_response:
+        return get_error(f"No user exists with email: {user_id}")
+
     invitees = response['Item']['invitees']
     if user_id not in invitees:
         invitees.append(user_id)
