@@ -501,7 +501,7 @@ components:
           type: "string"
         end:
           type: "string"
-        imageurl:
+        img_url:
           type: "string"
         full_address:
           type: "string"
@@ -532,7 +532,7 @@ components:
           type: "string"
         summary:
           type: "string"
-        imageurl:
+        img_url:
           type: "string"
         full_address:
           type: "string"

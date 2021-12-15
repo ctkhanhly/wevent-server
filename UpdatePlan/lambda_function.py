@@ -6,6 +6,7 @@ import pprint
 import time
 import uuid
 import os
+from boto3.dynamodb.conditions import Key
 
 
 logger = logging.getLogger()
@@ -22,6 +23,7 @@ db = boto3.resource(
 table = db.Table("Plans")
 
 user_table = db.Table("Users")
+events_table = db.Table("Events")
 
 def check_start(start):
     # print('check start', isinstance(start, int), start.isdigit())
@@ -80,9 +82,11 @@ def process_vote_update(body):
     item = response['Item']
     votes = response['Item']['votes']  
     def map_event(e):
-        if e['event_id'] == event_id:
+        if e['event']['event_id'] == event_id:
             if user_id not in e['users']:
                 e['users'].append(user_id)
+            else: #unvote
+                e['users'].remove(user_id)
         return e
     votes = list(map(map_event, votes))
     item['votes'] = votes
@@ -110,13 +114,32 @@ def process_add_friend_update(body):
     response = table.get_item(Key={'plan_id': plan_id}, ConsistentRead=True)
     if 'Item' not in response:
         return get_error(f"No plan exists with plan_id: {plan_id}")
+    
     print('item', response['Item'])
     item = response['Item']
 
     user_response = user_table.get_item(Key={'email': user_id}, ConsistentRead=True)
     if 'Item' not in user_response:
         return get_error(f"No user exists with email: {user_id}")
+    plans = user_response['Item']['plan_ids']
+    def filter_plan(plan):
+        return plan['plan_id'] == plan_id
+    plan_existed = list(filter(filter_plan, plans))
+    if len(plan_existed) == 0:
+        plans.append({'plan_id': plan_id, 'isHost': item['host_id'] == user_id})
+    user_update_response = user_table.update_item(
+            Key={
+                'email': user_id
+            },
+            UpdateExpression="set plan_ids=:p",
+            ExpressionAttributeValues={
+                ':p': plans
+            },
+            ReturnValues="UPDATED_NEW"
+        )
 
+    
+    
     invitees = response['Item']['invitees']
     if user_id not in invitees:
         invitees.append(user_id)
@@ -149,7 +172,7 @@ def process_manual_trigger_update(body):
     item = response['Item']
     votes = response['Item']['votes']
     def filter_event(e):
-        return e['event_id'] == event_id
+        return e['event']['event_id'] == event_id
     has_event = list(filter(filter_event, votes))
     if len(has_event) == 0:
         return get_error("Event was not selected in plan")
@@ -175,6 +198,11 @@ def process_manual_trigger_update(body):
 def process_add_event(body):
     plan_id = body['plan_id']
     event_id = body['event_id']
+    if isinstance(event_id, str):
+        if not event_id.isdigit():
+            return get_error("Invalid event_id, must be a number")
+        else:
+            event_id = int(event_id)
 
     response = table.get_item(Key={'plan_id': plan_id}, ConsistentRead=True)
     if 'Item' not in response:
@@ -183,10 +211,17 @@ def process_add_event(body):
     item = response['Item']
     votes = response['Item']['votes']
     def filter_event(e):
-        return e['event_id'] == event_id
+        return e['event']['event_id'] == event_id
     has_event = list(filter(filter_event, votes))
     if len(has_event) == 0:
-        votes.append({'event_id': event_id, 'users': []})
+        print('event_id', event_id)
+        response = events_table.query(
+            KeyConditionExpression=Key('event_id').eq(event_id)
+        )
+        if 'Items' not in response or len(response['Items']) == 0:
+            return get_error(f"No event exists with plan_id: {event_id}")
+        event = response['Items'][0]
+        votes.append({'event': event, 'users': []})
     item['votes'] = votes
     try:
         response = table.update_item(

@@ -25,6 +25,7 @@ db = boto3.resource(
     )
 plans_table = db.Table("Plans")
 events_table = db.Table("Events")
+venues_table = db.Table("Venues")
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
@@ -60,26 +61,36 @@ def date_from_unix(unix):
 
 def event_response(vote):
     try:
-        response = events_table.get_item(Key={'event_id': vote['event_id']})
-        if 'Item' not in response:
-            return None
-        item = response['Item']
-        del vote['event_id']
-        vote['event'] = {
-            'event_id': item['event_id'],
-            'event_name':  item['event_name'],
-            'description': item['description'],
-            'start': date_from_unix(item['start']),
-            'end': date_from_unix(item['end']),
-            'imageurl': item['imageurl'],
-            'full_address': item['full_address']
-        }
+        event = vote['event']
+        print('event_response event', event)
+        if isinstance(event['start'], int):
+            vote['event']['start'] = date_from_unix(event['start'])
+        if isinstance(event['end'], int):
+            vote['event']['end'] = date_from_unix(event['end'])
+        print('vote', vote)
+        
+        print('vote', vote)
+        venue_id = event['venue_id']
+        print('venue_id', venue_id, type(venue_id))
+        
+        if isinstance(venue_id, str):
+            venue_id = int(venue_id)
+        
+        response = venues_table.query(
+            KeyConditionExpression=Key('venue_id').eq(venue_id)
+        )
+        if 'Items' not in response or len(response['Items']) == 0:
+            return get_error(f"No event exists with plan_id: {event_id}")
+        venue = response['Items'][0]
+        del event['venue_id']
+        del event['category']
+        event['full_address'] = venue['full_address']
         return vote
     except ClientError as e:
         # return get_error(e)
         return None
     except Exception as e:
-        # raise IOError(e)
+        raise IOError(e)
         return None
 
 def plan_to_plan_response(plan):
