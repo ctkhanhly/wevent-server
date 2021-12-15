@@ -26,6 +26,7 @@ db = boto3.resource(
 plans_table = db.Table("Plans")
 events_table = db.Table("Events")
 venues_table = db.Table("Venues")
+users_table = db.Table("Users")
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
@@ -99,6 +100,26 @@ def plan_to_plan_response(plan):
     plan['votes'] = list(filter(lambda vote: vote != None, plan['votes']))
     return plan
 
+def get_plans(user_id):
+    try:
+        response = users_table.get_item(Key={'email': user_id})
+        if 'Item' not in response:
+            return get_error(f"User {user_id} not found")
+        plans_result = []
+        plans = response['Item']['plan_ids']
+        for plan in plans:
+            plan_id = plan['plan_id']
+            plan_response = plans_table.get_item(Key={'plan_id': plan_id}, ConsistentRead=True)
+            if 'Item' not in plan_response:
+                return get_error(f"Internal Error: plan {plan_id} not found in {user_id} record")
+            plans_result.append(plan_response['Item'])
+        return plans_result
+
+    except ClientError as e:
+        return get_error(e.response['Error']['Message'])
+    except Exception as e:
+        return get_error(e)
+
 def dispatch(event):
     user_id = event['queryStringParameters']['user_id']
 
@@ -107,7 +128,9 @@ def dispatch(event):
             IndexName='host-index',
             KeyConditionExpression=Key('host_id').eq(user_id)
         )
-        plans = response.get('Items', [])
+        # plans = response.get('Items', [])
+        plans = get_plans(user_id)
+
         plans = list(map(plan_to_plan_response, plans))
         body = {
             'results': plans
