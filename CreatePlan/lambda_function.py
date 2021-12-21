@@ -21,6 +21,7 @@ db = boto3.resource(
     aws_secret_access_key=SECRET_KEY,
     )
 table = db.Table("Plans")
+user_table = db.Table("Users")
 
 def check_start(start):
     # print('check start', isinstance(start, int), start.isdigit())
@@ -61,6 +62,27 @@ def get_error(message):
 votes: [{ event_id: S, users: [] }]
 '''
 
+def add_plan_to_user_table(plan_id, user_id):
+    user_response = user_table.get_item(Key={'email': user_id}, ConsistentRead=True)
+    if 'Item' not in user_response:
+        return get_error(f"No user exists with email: {user_id}")
+    plans = user_response['Item']['plan_ids']
+    def filter_plan(plan):
+        return plan['plan_id'] == plan_id
+    plan_existed = list(filter(filter_plan, plans))
+    if len(plan_existed) == 0:
+        plans.append({'plan_id': plan_id, 'isHost': True})
+    user_update_response = user_table.update_item(
+            Key={
+                'email': user_id
+            },
+            UpdateExpression="set plan_ids=:p",
+            ExpressionAttributeValues={
+                ':p': plans
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+
 def dispatch(event):
     body = json.loads(event['body'])
     name = body['name']
@@ -91,6 +113,8 @@ def dispatch(event):
                 'host_id': host_id
             }
         )
+
+        add_plan_to_user_table(plan_id, host_id)
         body = {
             'plan_id': plan_id
         }

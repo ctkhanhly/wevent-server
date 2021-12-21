@@ -160,10 +160,11 @@ def dispatch(event):
             # KeyConditionExpression=Key('start').gte(start) & Key('category').eq(category)
         )
         print('response from events table', response)
-        events = response.get('Items', [])[:MAX_NUMBER_OF_EVENTS]
+        events = response.get('Items', [])
         events = list(map(change_start, events))
         print('finished change_start')
         events = list(filter(lambda event: event['start'] >= start, events))
+        events = events[:MAX_NUMBER_OF_EVENTS]
         print('finished filter start')
         events = map(functools.partial(event_to_event_response, neighborhood=neighborhood), events)
         # events = list(map(event_to_event_response, events))
