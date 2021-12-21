@@ -1,0 +1,367 @@
+---
+swagger: "2.0"
+info:
+  description: "Wevent APIs"
+  version: "1.0.0"
+  title: "Wevent"
+host: "uigvfi44od.execute-api.us-east-1.amazonaws.com"
+basePath: "/test"
+schemes:
+- "https"
+paths:
+  /createPlan:
+    post:
+      operationId: "createPlan"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "Plan"
+        required: true
+        schema:
+          $ref: "#/definitions/Plan"
+      responses:
+        "200":
+          description: "200 response"
+          schema:
+            $ref: "#/definitions/MODELbc96e6"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "500":
+          description: "500 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "403":
+          description: "403 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+    options:
+      consumes:
+      - "application/json"
+      responses:
+        "200":
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+            Access-Control-Allow-Methods:
+              type: "string"
+            Access-Control-Allow-Headers:
+              type: "string"
+  /getEventMetaData:
+    get:
+      operationId: "getEventMetaData"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: "200 response"
+          schema:
+            $ref: "#/definitions/EventMetaData"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "500":
+          description: "500 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "403":
+          description: "403 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+    options:
+      consumes:
+      - "application/json"
+      responses:
+        "200":
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+            Access-Control-Allow-Methods:
+              type: "string"
+            Access-Control-Allow-Headers:
+              type: "string"
+  /getPlans:
+    get:
+      operationId: "getPlans"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "user_id"
+        in: "query"
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "200 response"
+          schema:
+            $ref: "#/definitions/MODEL6b1aef"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "500":
+          description: "500 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "403":
+          description: "403 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+    options:
+      consumes:
+      - "application/json"
+      responses:
+        "200":
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+            Access-Control-Allow-Methods:
+              type: "string"
+            Access-Control-Allow-Headers:
+              type: "string"
+  /searchEvents:
+    get:
+      operationId: "searchEvents"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "start"
+        in: "query"
+        required: true
+        type: "string"
+      - name: "neighborhood"
+        in: "query"
+        required: true
+        type: "string"
+      - name: "category"
+        in: "query"
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "200 response"
+          schema:
+            $ref: "#/definitions/MODEL53cdd4"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "500":
+          description: "500 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "403":
+          description: "403 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+    options:
+      consumes:
+      - "application/json"
+      responses:
+        "200":
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+            Access-Control-Allow-Methods:
+              type: "string"
+            Access-Control-Allow-Headers:
+              type: "string"
+  /updatePlan:
+    put:
+      operationId: "updatePlan"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "500":
+          description: "500 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "403":
+          description: "403 response"
+          schema:
+            $ref: "#/definitions/Error"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+    options:
+      consumes:
+      - "application/json"
+      responses:
+        "200":
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+            Access-Control-Allow-Methods:
+              type: "string"
+            Access-Control-Allow-Headers:
+              type: "string"
+definitions:
+  EventInPlan:
+    type: "object"
+    properties:
+      event_id:
+        type: "string"
+      img_url:
+        type: "string"
+      start:
+        type: "string"
+      description:
+        type: "string"
+      event_name:
+        type: "string"
+      end:
+        type: "string"
+      full_address:
+        type: "string"
+  MODEL53cdd4:
+    type: "object"
+    properties:
+      result:
+        $ref: "#/definitions/Events"
+  Vote:
+    type: "object"
+    properties:
+      event:
+        $ref: "#/definitions/EventInPlan"
+      users:
+        type: "array"
+        items:
+          type: "string"
+  Plans:
+    type: "object"
+    properties:
+      results:
+        type: "array"
+        items:
+          $ref: "#/definitions/PlanResponse"
+  Events:
+    type: "object"
+    properties:
+      results:
+        type: "array"
+        items:
+          $ref: "#/definitions/Event"
+  PlanResponse:
+    type: "object"
+    properties:
+      invitees:
+        type: "array"
+        items:
+          type: "string"
+      selected_event:
+        type: "string"
+      name:
+        type: "string"
+      trigger_option:
+        type: "string"
+      votes:
+        type: "array"
+        items:
+          $ref: "#/definitions/Vote"
+      plan_id:
+        type: "string"
+  MODEL6b1aef:
+    type: "object"
+    properties:
+      result:
+        $ref: "#/definitions/Plans"
+  Error:
+    type: "object"
+    properties:
+      code:
+        type: "integer"
+        format: "int32"
+      message:
+        type: "string"
+  Event:
+    type: "object"
+    properties:
+      summary:
+        type: "string"
+      event_id:
+        type: "string"
+      img_url:
+        type: "string"
+      start:
+        type: "string"
+      description:
+        type: "string"
+      event_name:
+        type: "string"
+      end:
+        type: "string"
+      full_address:
+        type: "string"
+      category:
+        type: "string"
+      venue_id:
+        type: "string"
+  MODELbc96e6:
+    type: "object"
+    properties:
+      body:
+        type: "object"
+        properties:
+          plan_id:
+            type: "string"
+  Plan:
+    type: "object"
+    required:
+    - "host_id"
+    - "name"
+    - "start"
+    - "trigger_option"
+    properties:
+      start:
+        type: "string"
+      name:
+        type: "string"
+      trigger_option:
+        type: "string"
+      host_id:
+        type: "string"
+  EventMetaData:
+    type: "object"
+    properties:
+      neighborhoods:
+        type: "array"
+      categories:
+        type: "array"
